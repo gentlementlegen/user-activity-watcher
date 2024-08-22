@@ -2,7 +2,7 @@ import { EmitterWebhookEvent as WebhookEvent, EmitterWebhookEventName as Webhook
 import { StaticDecode, StringOptions, Type as T, TypeBoxError } from "@sinclair/typebox";
 import ms from "ms";
 
-export type SupportedEvents = "issues.closed" | "issues.assigned" | "issues.unassigned";
+export type SupportedEvents = "issues.assigned"
 
 export interface PluginInputs<T extends WebhookEventName = SupportedEvents> {
   stateId: string;
@@ -14,14 +14,7 @@ export interface PluginInputs<T extends WebhookEventName = SupportedEvents> {
 }
 
 function thresholdType(options?: StringOptions) {
-  return T.Transform(
-    T.String({
-      // Matches a pattern like [decimal] [unit], e.g. 3.25 hours
-      pattern: /^\s*\d+(\.\d+)?\s+\S+\s*$/.source,
-      errorMessage: "must be a duration, in the format of [decimal] [unit]",
-      ...options,
-    })
-  )
+  return T.Transform(T.String(options))
     .Decode((value) => {
       const milliseconds = ms(value);
       if (milliseconds === undefined) {
@@ -42,11 +35,18 @@ export const userActivityWatcherSettingsSchema = T.Object({
   /**
    * Delay to send reminders. 0 means disabled. Any other value is counted in days, e.g. 1,5 days
    */
-  sendRemindersThreshold: thresholdType({ default: "3.5 days" }),
+  warning: thresholdType({ default: "3.5 days" }),
+  /**
+   * By default all repositories are watched. Use this option to opt-out from watching specific repositories
+   * within your organization. The value is an array of repository names.
+   */
+  watch: T.Object({
+    optOut: T.Array(T.String()),
+  }),
   /**
    * Delay to unassign users. 0 means disabled. Any other value is counted in days, e.g. 7 days
    */
-  unassignUserThreshold: thresholdType({
+  disqualification: thresholdType({
     default: "7 days",
   }),
 });
